@@ -81,7 +81,6 @@
       resultArea.textContent = '生成中，请稍候...';
 
       if (apiUrl && uploadedBase64) {
-        // 调用后端 API
         try {
           const payload = { student_name: name, image_base64: uploadedBase64 };
           const res = await fetch(apiUrl, {
@@ -98,7 +97,6 @@
           resultArea.textContent = '生成失败：'+err.message;
         } finally { generateBtn.disabled = false; }
       } else {
-        // 没有后端 API，直接生成示例文本
         lastGeneratedText = `${name}小朋友，开头你今天课堂状态非常好，一上课就表现出很强的专注和热情。在看绘本和讨论时，你的眼神很专注，积极分享自己的想法。课堂中途有一小会儿短暂分心/犹豫，但在老师提醒后你立刻调整并继续完成。你在作品中展现了很棒的创意，比如对细节的处理和额外的小道具，让画面更有故事性。最后在装饰和上色环节，作品整体色彩丰富、画面饱满，体现出耐心。小建议：下次再坚持一下细节描绘会更好。期待你下一次的作品，继续保持热情和创造力！`;
         resultArea.textContent = lastGeneratedText;
         downloadBtn.disabled = false;
