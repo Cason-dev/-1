@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>学生作品课评生成器</title>
+  <style>
+    body { font-family: system-ui, -apple-system, "Helvetica Neue", Arial; max-width: 900px; margin: 24px auto; color:#222; }
+    header { display:flex; gap:16px; align-items:center; }
+    h1 { margin:0; font-size:20px; }
+    .card { border:1px solid #e6e6e6; padding:16px; border-radius:8px; margin-top:12px; box-shadow:0 2px 6px rgba(0,0,0,0.03);}
+    label { font-weight:600; display:block; margin-top:8px; }
+    input[type="text"] { width:100%; padding:8px; margin-top:6px; box-sizing:border-box; }
+    .row { display:flex; gap:12px; margin-top:12px; }
+    #preview { max-width:100%; max-height:360px; border-radius:6px; border:1px dashed #ddd; display:block; margin-top:8px; }
+    button { padding:10px 16px; border-radius:8px; border:0; background:#0066FF; color:white; cursor:pointer; }
+    button:disabled { opacity:.5; cursor:not-allowed; }
+    pre { white-space:pre-wrap; word-wrap:break-word; background:#f8f8f8; padding:12px; border-radius:6px; }
+    .small { font-size:13px; color:#666; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🎨 学生作品课评生成器（HTML 版）</h1>
+  </header>
+
+  <div class="card">
+    <label>学生名字</label>
+    <input id="studentName" placeholder="例如：十一" />
+
+    <label>上传作品图片（JPG/PNG）</label>
+    <input id="fileInput" type="file" accept="image/*" />
+    <img id="preview" style="display:none" />
+
+    <div class="row">
+      <button id="generateBtn">生成课评</button>
+      <button id="downloadBtn" disabled>下载课评 (.txt)</button>
+    </div>
+
+    <div style="margin-top:12px">
+      <label>后端 API 地址（可选）</label>
+      <input id="apiUrl" placeholder="例如：https://your-backend.example/api/generate" />
+      <div class="small">不填则生成示例文本，仅供测试。</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <label>生成的课评</label>
+    <pre id="resultArea">尚未生成课评</pre>
+  </div>
+
+  <script>
+    const studentNameInput = document.getElementById('studentName');
+    const fileInput = document.getElementById('fileInput');
+    const preview = document.getElementById('preview');
+    const generateBtn = document.getElementById('generateBtn');
+    const resultArea = document.getElementById('resultArea');
+    const apiUrlInput = document.getElementById('apiUrl');
+    const downloadBtn = document.getElementById('downloadBtn');
+
+    let uploadedBase64 = null;
+    let lastGeneratedText = '';
+
+    fileInput.addEventListener('change', async (ev) => {
+      const f = ev.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        preview.src = reader.result;
+        preview.style.display = 'block';
+        uploadedBase64 = reader.result.split(',')[1];
+      };
+      reader.readAsDataURL(f);
+    });
+
+    generateBtn.addEventListener('click', async () => {
+      const apiUrl = apiUrlInput.value.trim();
+      const name = studentNameInput.value.trim() || '同学';
+
+      generateBtn.disabled = true;
+      resultArea.textContent = '生成中，请稍候...';
+
+      if (apiUrl && uploadedBase64) {
+        // 调用后端 API
+        try {
+          const payload = { student_name: name, image_base64: uploadedBase64 };
+          const res = await fetch(apiUrl, {
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) throw new Error('后端返回错误');
+          const data = await res.json();
+          lastGeneratedText = data.review || '生成失败：后端返回空内容';
+          resultArea.textContent = lastGeneratedText;
+          downloadBtn.disabled = false;
+        } catch(err) {
+          resultArea.textContent = '生成失败：'+err.message;
+        } finally { generateBtn.disabled = false; }
+      } else {
+        // 没有后端 API，直接生成示例文本
+        lastGeneratedText = `${name}小朋友，开头你今天课堂状态非常好，一上课就表现出很强的专注和热情。在看绘本和讨论时，你的眼神很专注，积极分享自己的想法。课堂中途有一小会儿短暂分心/犹豫，但在老师提醒后你立刻调整并继续完成。你在作品中展现了很棒的创意，比如对细节的处理和额外的小道具，让画面更有故事性。最后在装饰和上色环节，作品整体色彩丰富、画面饱满，体现出耐心。小建议：下次再坚持一下细节描绘会更好。期待你下一次的作品，继续保持热情和创造力！`;
+        resultArea.textContent = lastGeneratedText;
+        downloadBtn.disabled = false;
+        generateBtn.disabled = false;
+      }
+    });
+
+    downloadBtn.addEventListener('click', () => {
+      if(!lastGeneratedText) return;
+      const blob = new Blob([lastGeneratedText], {type:'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'student_review.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    });
+  </script>
+</body>
+</html>
